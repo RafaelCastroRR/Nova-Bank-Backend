@@ -4,8 +4,6 @@ import User from "../users/user.model.js"
 export const validarJWT = async (req,res,next) => {
     const token = req.header('x-token')
 
-    console.log("token", token)
-    console.log("SECRETPRIVATEKEY:", process.env.SECRETPRIVATEKEY)
 
     if (!token) {
         return res.status(401).json({
