@@ -16,6 +16,24 @@ API RESTful empresarial para la plataforma de banca en línea **Nova Bank**. Dis
 
 ---
 
+## 👥 Cuentas de Prueba para Testing (Clientes)
+
+Para evaluar y probar el portal de clientes, transacciones y seguridad 2FA, se encuentran preconfiguradas las siguientes cuentas de prueba:
+
+> 🔑 **Contraseña para todos los clientes:** `Nova123!`
+
+| Nombre | Usuario | Correo Electrónico | No. Cuenta | Tipo de Cuenta | Saldo Inicial |
+|---|---|---|---|---|---|
+| **Carlos Morales** | `carlosm` | `carlos.morales@novabank.com` | `1002345671` | Ahorro | **Q 18,500.00** |
+| **Sofia Alvarez** | `sofiaa` | `sofia.alvarez@novabank.com` | `1002345672` | Monetaria | **Q 24,350.50** |
+| **Mateo Castillo** | `mateoc` | `mateo.castillo@novabank.com` | `1002345673` | Monetaria | **Q 42,000.00** |
+| **Elena Rodriguez** | `elenar` | `elena.rodriguez@novabank.com` | `1002345674` | Ahorro | **Q 7,850.25** |
+
+> 📱 **Autenticación en Dos Factores (2FA):**  
+> Al iniciar sesión con cualquiera de los clientes por primera vez, el sistema genera el código QR (compatible con **Google Authenticator**, **Microsoft Authenticator** y **Authy**) para vincular el token TOTP seguro antes de acceder a operaciones transaccionales.
+
+---
+
 ## ✨ Características y Módulos Principales
 
 - **Gestión de Cuentas:** Apertura y administración de cuentas bancarias (ahorro y monetarias/corrientes) con generación única de número de cuenta.
@@ -64,7 +82,12 @@ URI_MONGO=mongodb+srv://<usuario>:<password>@cluster0.example.mongodb.net/Nova_B
 JWT_SECRET=tu_secreto_seguro_jwt
 ```
 
-### 4. Iniciar el servidor
+### 4. Inicializar Datos de Prueba (Opcional)
+```bash
+node seed_novabank.js
+```
+
+### 5. Iniciar el servidor
 ```bash
 # Modo desarrollo con nodemon
 npm run dev
@@ -90,6 +113,7 @@ npm start
 │   ├── stats/          # Estadísticas y métricas financieras
 │   ├── transactions/   # Depósitos, retiros y transferencias
 │   └── users/          # Administración de perfiles y roles
+├── seed_novabank.js    # Script de inicialización de datos de prueba
 ├── index.js            # Punto de entrada de la aplicación
 ├── package.json
 └── README.md
