@@ -1,15 +1,38 @@
 import speakeasy from "speakeasy";
 import qrcode from "qrcode";
+import User from "../users/user.model.js";
 
 export const start2FA = async (req, res) => {
   try {
     const user = req.user;
-    const secret = speakeasy.generateSecret({ name: `Nova Bank ${user.name}`, length: 20 });
-
-    user.twoFactorSecret = secret.base32;
-    await user.save();
+    const accountLabel = user.email || user.username || user.name || "User";
     
-    const qrCode = await qrcode.toDataURL(secret.otpauth_url);
+    const secret = speakeasy.generateSecret({
+      name: `NovaBank:${accountLabel}`,
+      issuer: "NovaBank",
+      length: 20,
+    });
+
+    // Guardar secreto directamente sin disparar validaciones de campos externos
+    await User.findByIdAndUpdate(user._id, {
+      twoFactorSecret: secret.base32,
+    });
+    
+    const otpAuthUrl = secret.otpauth_url || speakeasy.otpauthURL({
+      secret: secret.base32,
+      label: `NovaBank:${accountLabel}`,
+      issuer: "NovaBank",
+      encoding: "base32",
+    });
+
+    const qrCode = await qrcode.toDataURL(otpAuthUrl, {
+      width: 250,
+      margin: 2,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+    });
 
     res.status(200).json({
       success: true,
@@ -32,15 +55,16 @@ export const verify2FA = async (req, res) => {
     const { twoFactorCode } = req.body;
     const user = req.user;
 
-    if (!user.twoFactorSecret) {
+    const freshUser = await User.findById(user._id);
+
+    if (!freshUser || !freshUser.twoFactorSecret) {
       return res.status(400).json({
         success: false,
         msg: "No se ha configurado el 2FA para este usuario",
       });
     }
 
-    
-    const cleanCode = twoFactorCode.toString().trim();
+    const cleanCode = twoFactorCode ? twoFactorCode.toString().trim() : "";
     
     if (cleanCode.length !== 6) {
       return res.status(400).json({
@@ -49,38 +73,26 @@ export const verify2FA = async (req, res) => {
       });
     }
 
-    console.log('Código 2FA recibido:', cleanCode);
-    console.log('Secreto almacenado:', user.twoFactorSecret);
-
-    // Intentamos verificar con diferentes ventanas de tiempo
+    // Ventana amplia de 4 pasos (±120 segundos) para compensar desfases de reloj
     const verified = speakeasy.totp.verify({
-      secret: user.twoFactorSecret,
+      secret: freshUser.twoFactorSecret,
       encoding: "base32",
       token: cleanCode,
-      window: 3, // Aumentamos la ventana para dar más margen
-      step: 30, // Aseguramos que el paso sea de 30 segundos
+      window: 4,
+      step: 30,
     });
 
-    console.log('Resultado de verificación:', verified);
-
     if (!verified) {
-      // Generamos un código de prueba para verificar que el secreto es válido
-      const testToken = speakeasy.totp({
-        secret: user.twoFactorSecret,
-        encoding: "base32",
-      });
-      
-      console.log('Código de prueba generado:', testToken);
-      
       return res.status(403).json({
         success: false,
         msg: "Código 2FA inválido o expirado",
-        hint: "Asegúrate de que el código sea el más reciente y que la hora de tu dispositivo esté sincronizada"
+        hint: "Asegúrate de que el reloj de tu teléfono esté sincronizado automáticamente en Ajustes de fecha/hora.",
       });
     }
 
-    user.twoFactorEnabled = true;
-    await user.save();
+    await User.findByIdAndUpdate(user._id, {
+      twoFactorEnabled: true,
+    });
 
     res.status(200).json({
       success: true,
@@ -95,4 +107,4 @@ export const verify2FA = async (req, res) => {
       error: error.message,
     });
   }
-}
+};
